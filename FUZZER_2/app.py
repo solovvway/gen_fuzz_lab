@@ -20,30 +20,7 @@ uniq_dump = []
 # генерируем уникальном множество пакетов
 for i in dump:
     # .get() в scapy не работает
-    ip_src = getattr(i.__getitem__('IP'), 'src', None) class Sender:
-    def __init__(self, iface='eth0'):
-        self.iface = iface
-
-    def send_packet(self, packet):
-        # Print the packet before sending
-        print("PACKET BEFORE SENDING:", packet.command())
-
-        # Remove checksum for IP packets
-        if IP in packet:
-            del packet[IP].chksum  # Remove checksum to recalculate
-
-        # Measure response time
-        start_time = time.time()
-        response = sendp(packet, iface=self.iface, verbose=0) if Ether in packet else send(packet, iface=self.iface, verbose=0)
-        end_time = time.time()
-
-        # Measure RTT
-        if response:
-            rtt = (end_time - start_time) * 1000  # Convert to milliseconds
-            print(f"Packet sent: {packet.summary()}, RTT: {rtt:.2f} ms")
-        else:
-            print(f"Packet sent: {packet.summary()}, No response")
-
+    ip_src = getattr(i.__getitem__('IP'), 'src', None)
     ip_dst = getattr(i.__getitem__('IP'), 'dst', None)
 
     mac_src = getattr(i.__getitem__('Ether'), 'src', None) 
