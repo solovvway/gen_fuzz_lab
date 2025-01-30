@@ -10,7 +10,7 @@ network = "192.168.1.0/24"
 # dump = sniff(filter=f'net {network}', count=52)
 # dump = [Ether()/IP(src="192.168.1.1", dst="192.168.1.2")/UDP()/DNS(), 
 #         Ether()/IP(src="192.168.1.1", dst="192.168.1.2")/UDP()/DNS()]
-dump = [Ether()/IP(dst='127.0.0.1')]
+dump = [Ether()/IP(dst='127.0.0.1'),Ether()/IP(src="192.168.1.1", dst="192.168.1.2")/UDP()/DNS()]
 # класс объекта популяции
 # объект популяции состоит из адресов источника и назначения и состава заголовков. Если они одинаковые, считаем пакет тем же 
 
@@ -44,7 +44,9 @@ for i in uniq_dump:
 print(population.show())
 
 a,b = population.choice_two()
+
 mutator = Mutator()
+print(a,b)
 pkt_after_fuzz = mutator.gen_fuzz(a,b)
 print(pkt_after_fuzz.command())
 
