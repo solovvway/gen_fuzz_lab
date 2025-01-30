@@ -1,5 +1,5 @@
 import sys
-import random
+from numpy.random import choice,randint
 from scapy.all import *
 from structures import *
 # обязательные переменные

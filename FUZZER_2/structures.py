@@ -1,4 +1,6 @@
 from scapy.all import *
+from numpy.random import choice,randint
+from collections import OrderedDict
 
 
 class Unit:
@@ -36,51 +38,49 @@ class Population:
             return f"{unit.show()}, {self.population[unit]}" 
     # выбор 2х pdu для кроссовера
     def choice_two(self):
-        pkt1 = random.choice(list(self.population.keys()))
-        pkt2 = random.choice(list(self.population.keys()))
+        pkt1 = choice(list(self.population.keys()),size=1,p=list(self.population.values()))
+        pkt2 = choice(list(self.population.keys()),size=1,p=list(self.population.values()))
         return pkt1, pkt2
 
     # выбор только 1 pdu для мутационного фаззинга
     def choice_one(self):
-        return random.choice(list(self.population.keys()))
+        return choice(list(self.population.keys()),size=1,p=list(self.population.values()))
 
 class Mutator:
     def __init__(self):
         # Constructor
-        self.crossovers = [
-            self.layer_crossover,
-            self.raw_crossover
-        ]
-        self.mutations = [
-            self.bit_flipping,
-            self.byte_flipping,
-            self.add_value,
-            self.replace_spec_value,
-            self.replace_rand_value,
-            self.delete_byte_block,
-            self.replace_byte_block,
-            self.add_one_to_rand_byte
-        ]
+        self.crossovers = OrderedDict([
+            (self.layer_crossover, 1),
+            (self.raw_crossover, 1)
+        ])
+        self.mutations = OrderedDict([
+            (self.bit_flipping, 1),
+            (self.byte_flipping, 1),
+            (self.add_value, 1),
+            (self.replace_spec_value, 1),
+            (self.replace_rand_value, 1),
+            (self.delete_byte_block, 1),
+            (self.replace_byte_block, 1),
+            (self.add_one_to_rand_byte, 1)
+        ])
 
-    def mut_fuzz(self,pkt1):
+    def mut_fuzz(self, pkt1):
         pkt1 = pkt1.pdu
-        mutation = random.choice(self.mutations)
-        return mutation(pkt1)
-    # случайный выбор кроссовера и мутации
-    # выполнение кроссовера и мутации
-    def gen_fuzz(self,pkt1,pkt2):
+        mutation = choice(list(self.mutations.keys()), size=1, p=list(self.mutations.values()))
+        return mutation[0](pkt1)
+
+    def gen_fuzz(self, pkt1, pkt2):
         pkt1 = pkt1.pdu
         pkt2 = pkt2.pdu
-        crossover = random.choice(self.crossovers)
-        mutation = random.choice(self.mutations)
-        after_crossover = crossover(pkt1,pkt2)
-        return mutation(after_crossover)
-
+        crossover = choice(list(self.crossovers.keys()), size=1, p=list(self.crossovers.values()))
+        mutation = choice(list(self.mutations.keys()), size=1, p=list(self.mutations.values()))
+        after_crossover = crossover[0](pkt1, pkt2)
+        return mutation[0](after_crossover)
     # Crossover
     # обе функции кроссовера принимают на вход 2 пакета scapy и выдают 1 пакет, соединенный
     # объединение по заголовкам. 
     def layer_crossover(self, pkt1: Ether, pkt2: Ether) -> Ether:
-        n = random.randint(1, min(len(pkt1.layers()), len(pkt2.layers())) - 1)
+        n = randint(1, min(len(pkt1.layers()), len(pkt2.layers())) - 1)
         q = pkt1.copy()
         q[n].payload = pkt2[n]
         return q
@@ -90,8 +90,8 @@ class Mutator:
         raw1 = raw(pkt1)
         raw2 = raw(pkt2)
 
-        id_1 = random.randint(0, len(raw1) - 1)
-        id_2 = random.randint(0, len(raw2) - 1)
+        id_1 = randint(0, len(raw1) - 1)
+        id_2 = randint(0, len(raw2) - 1)
 
         new_raw = raw1[:id_1] + raw2[id_2:]
 
@@ -100,7 +100,7 @@ class Mutator:
     # Mutations
     def bit_flipping(self, pkt: Ether) -> Ether:
         pkt_raw = raw(pkt)
-        bit_idx = random.randint(0, len(pkt_raw) * 8 - 1)
+        bit_idx = randint(0, len(pkt_raw) * 8 - 1)
         byte_idx = bit_idx // 8
         bit_mask = 1 << (bit_idx % 8)
         pkt_bytes = bytearray(pkt_raw)
@@ -112,7 +112,7 @@ class Mutator:
 
     def byte_flipping(self, pkt: Ether) -> Ether:
         pkt_raw = raw(pkt)
-        byte_idx = random.randint(0, len(pkt_raw) - 1)
+        byte_idx = randint(0, len(pkt_raw) - 1)
         pkt_bytes = bytearray(pkt_raw)
 
         # сложение с байтом со всеми единицами
@@ -123,7 +123,7 @@ class Mutator:
     # добавление к каждому байту значения от -128 до 127
     def add_value(self, pkt: Ether) -> Ether:
         pkt_raw = raw(pkt)
-        val = random.randint(-128, 127)
+        val = randint(-128, 127)
         pkt_bytes = [(x + val) & 0xFF for x in pkt_raw]
 
         return Ether(bytes(pkt_bytes))
@@ -131,7 +131,7 @@ class Mutator:
     # замена специальными значениями
     def replace_spec_value(self, pkt: Ether) -> Ether:
         pkt_raw = raw(pkt)
-        special_val = random.randint(0, 3)
+        special_val = randint(0, 3)
 
         if special_val == 0:
             pkt_bytes = [0] * len(pkt_raw)  # пустой пакет
@@ -147,22 +147,22 @@ class Mutator:
     # замена бит случайными значениями
     def replace_rand_value(self, pkt: Ether) -> Ether:
         pkt_raw = raw(pkt)
-        pkt_bytes = [random.randint(0, 255) for _ in pkt_raw]
+        pkt_bytes = [randint(0, 255) for _ in pkt_raw]
 
         return Ether(bytes(pkt_bytes))
 
     # удаление блока байт
     def delete_byte_block(self, pkt: Ether) -> Ether:
         pkt_raw = raw(pkt)
-        block_size = random.randint(1, len(pkt_raw) // 2)
+        block_size = randint(1, len(pkt_raw) // 2)
 
         return Ether(bytes(pkt_raw[block_size:]))
 
     # замена блока байтов случайными значениями
     def replace_byte_block(self, pkt: Ether) -> Ether:
         pkt_raw = raw(pkt)
-        block_size = random.randint(1, len(pkt_raw) // 2)
-        new_block = [random.randint(0, 255) for _ in range(block_size)]
+        block_size = randint(1, len(pkt_raw) // 2)
+        new_block = [randint(0, 255) for _ in range(block_size)]
 
         return Ether(bytes(new_block + list(pkt_raw)[block_size:]))
 
@@ -170,7 +170,7 @@ class Mutator:
     def add_one_to_rand_byte(self, pkt: Ether) -> Ether:
         pkt_raw = raw(pkt)
         pkt_bytes = bytearray(pkt_raw)
-        byte_idx = random.randint(0, len(pkt_bytes) - 1)
+        byte_idx = randint(0, len(pkt_bytes) - 1)
         pkt_bytes[byte_idx] = (pkt_bytes[byte_idx] + 1) & 0xFF
 
         return Ether(bytes(pkt_bytes))
