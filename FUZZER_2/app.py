@@ -36,19 +36,37 @@ for i in dump:
         uniq_dump.append(unit_instance)
     # else:
         # print("Ununiq")
+# Полный уникальный набор протоколов в uniq_dump
+uniq_protocols = set()
+for i in uniq_dump:
+    for j in i.layers:
+        uniq_protocols.add(j.__name__)
 
-# Инициализировать популяцию
+# uniq_protocols ОТПРАВИТЬ В ВЕБ ДЛЯ ВЫБОРА КОЭФФИЦИЕНТОВ
+print(uniq_protocols)
+# proto_weights ПОЛУЧИТЬ ИЗ ВЕБА
+# Инициализация весов протоколов
+proto_weights = {
+    'IP':228,
+    'TCP':12,
+    'DNS':123
+}
+# for i in proto_weights:
+
+
+# Инициализировать популяцию c весами
 population = Population()
 for i in uniq_dump:
-    population.add(i,1)
+    weight = proto_weights[i.pdu.lastlayer()._name]
+    population.add(i,weight)
 print(population.show())
 
-a,b = population.choice_two()
+# a,b = population.choice_two()
 
-mutator = Mutator()
-print(a,b)
-pkt_after_fuzz = mutator.gen_fuzz(a,b)
-print(pkt_after_fuzz.command())
+# mutator = Mutator()
+# print(a,b)
+# pkt_after_fuzz = mutator.gen_fuzz(a,b)
+# print(pkt_after_fuzz.command())
 
-sender = Sender(iface="lo")
-sender.send_packet(pkt_after_fuzz)
+# sender = Sender(iface="lo")
+# sender.send_packet(pkt_after_fuzz)

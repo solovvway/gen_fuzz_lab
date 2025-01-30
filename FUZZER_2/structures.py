@@ -35,8 +35,10 @@ class Population:
         self.population.update({unit: weight})
 
     def show(self):
+        output = []
         for unit in self.population:
-            return f"{unit.show()}, {self.population[unit]}"
+            output.append(f"{unit.show()}, {self.population[unit]}")
+        return output
 
     def choice_two(self):
         print(f'{list(self.population.values())=}')
