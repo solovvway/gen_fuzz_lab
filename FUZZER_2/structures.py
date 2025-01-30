@@ -1,3 +1,6 @@
+from scapy.all import *
+
+
 class Unit:
     def __init__(self, ip_src, ip_dst, mac_src, mac_dst, layers,pdu):
         self.ip_src = ip_src
@@ -31,7 +34,15 @@ class Population:
     def show(self):
         for unit in self.population:
             return f"{unit.show()}, {self.population[unit]}" 
+    # выбор 2х pdu для кроссовера
+    def choice_two(self):
+        pkt1 = random.choice(list(self.population.keys()))
+        pkt2 = random.choice(list(self.population.keys()))
+        return pkt1, pkt2
 
+    # выбор только 1 pdu для мутационного фаззинга
+    def choice_one(self):
+        return random.choice(list(self.population.keys()))
 
 class Mutator:
     def __init__(self):
@@ -50,6 +61,20 @@ class Mutator:
             self.replace_byte_block,
             self.add_one_to_rand_byte
         ]
+
+    def mut_fuzz(self,pkt1):
+        pkt1 = pkt1.pdu
+        mutation = random.choice(self.mutations)
+        return mutation(pkt1)
+    # случайный выбор кроссовера и мутации
+    # выполнение кроссовера и мутации
+    def gen_fuzz(self,pkt1,pkt2):
+        pkt1 = pkt1.pdu
+        pkt2 = pkt2.pdu
+        crossover = random.choice(self.crossovers)
+        mutation = random.choice(self.mutations)
+        after_crossover = crossover(pkt1,pkt2)
+        return mutation(after_crossover)
 
     # Crossover
     # обе функции кроссовера принимают на вход 2 пакета scapy и выдают 1 пакет, соединенный
@@ -149,3 +174,27 @@ class Mutator:
         pkt_bytes[byte_idx] = (pkt_bytes[byte_idx] + 1) & 0xFF
 
         return Ether(bytes(pkt_bytes))
+    
+class Sender:
+    def __init__(self, iface='eth0'):
+        self.iface = iface
+
+    def send_packet(self, packet):
+        # Print the packet before sending
+        print("PACKET BEFORE SENDING:", packet.command())
+
+        # Remove checksum for IP packets
+        if IP in packet:
+            del packet[IP].chksum  # Remove checksum to recalculate
+
+        # Measure response time
+        start_time = time.time()
+        response = sendp(packet, iface=self.iface, verbose=0) if Ether in packet else send(packet, iface=self.iface, verbose=0)
+        end_time = time.time()
+
+        # Measure RTT
+        if response:
+            rtt = (end_time - start_time) * 1000  # Convert to milliseconds
+            print(f"Packet sent: {packet.summary()}, RTT: {rtt:.2f} ms")
+        else:
+            print(f"Packet sent: {packet.summary()}, No response")
