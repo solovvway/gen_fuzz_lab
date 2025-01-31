@@ -10,7 +10,7 @@ network = "192.168.1.0/24"
 # dump = sniff(filter=f'net {network}', count=52)
 # dump = [Ether()/IP(src="192.168.1.1", dst="192.168.1.2")/UDP()/DNS(), 
 #         Ether()/IP(src="192.168.1.1", dst="192.168.1.2")/UDP()/DNS()]
-dump = [Ether()/IP(dst='127.0.0.1'),Ether()/IP(src="192.168.1.1", dst="192.168.1.2")/UDP()/DNS()]
+dump = [Ether()/IP(dst='127.0.0.1'),Ether()/IP(src="192.168.1.1", dst="192.168.1.2")/UDP()/DNS(),Ether()/IP(dst='127.0.0.1')/TCP()]
 # класс объекта популяции
 # объект популяции состоит из адресов источника и назначения и состава заголовков. Если они одинаковые, считаем пакет тем же 
 
@@ -47,9 +47,9 @@ print(uniq_protocols)
 # proto_weights ПОЛУЧИТЬ ИЗ ВЕБА
 # Инициализация весов протоколов
 proto_weights = {
-    'IP':228,
-    'TCP':12,
-    'DNS':123
+    'IP':1,
+    'TCP':2,
+    'DNS':3
 }
 # for i in proto_weights:
 
@@ -61,12 +61,17 @@ for i in uniq_dump:
     population.add(i,weight)
 print(population.show())
 
-# a,b = population.choice_two()
 
-# mutator = Mutator()
+# a,b = population.choice_two()
+weights = {
+    'crossovers': [99, 3],  # Новые веса для методов кроссовера
+    'mutations': [99, 2, 1, 1, 2, 1, 1, 1]  # Новые веса для методов мутации
+}
+mutator = Mutator(weights)
+a,b = population.choice_two()
 # print(a,b)
-# pkt_after_fuzz = mutator.gen_fuzz(a,b)
-# print(pkt_after_fuzz.command())
+pkt_after_fuzz = mutator.gen_fuzz(a,b)
+print(pkt_after_fuzz.command())
 
 # sender = Sender(iface="lo")
 # sender.send_packet(pkt_after_fuzz)

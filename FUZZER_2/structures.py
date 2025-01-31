@@ -51,7 +51,7 @@ class Population:
 
 
 class Mutator:
-    def __init__(self):
+    def __init__(self, weights=None):
         self.crossovers = OrderedDict([
             (self.layer_crossover, 1),
             (self.raw_crossover, 1)
@@ -66,7 +66,15 @@ class Mutator:
             (self.replace_byte_block, 1),
             (self.add_one_to_rand_byte, 1)
         ])
-
+        # если переданы веса, использовать их для инициализации мутатора
+        if weights:
+            if 'crossovers' in weights:
+                for method, weight in zip(self.crossovers.keys(), weights['crossovers']):
+                    self.crossovers[method] = weight
+            
+            if 'mutations' in weights:
+                for method, weight in zip(self.mutations.keys(), weights['mutations']):
+                    self.mutations[method] = weight
     def mut_fuzz(self, pkt1):
         pkt1 = pkt1.pdu
         mutation = random.choices(list(self.mutations.keys()), weights=list(self.mutations.values()), k=1)[0]
