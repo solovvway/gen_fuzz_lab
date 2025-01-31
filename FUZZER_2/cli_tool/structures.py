@@ -194,3 +194,63 @@ class Sender:
             print(f"Packet sent: {packet.summary()}, RTT: {rtt:.2f} ms")
         else:
             print(f"Packet sent: {packet.summary()}, No response")
+
+class Sniffer:
+    def __init__(self, network, iface='eth0'):
+        self.iface = iface
+        self.captured_packets = []
+        self.network = None
+        subnet_pattern = re.compile(r'^\d{1,3}(\.\d{1,3}){3}/\d{1,2}$')
+        if subnet_pattern.match(network):
+            self.network = network 
+        
+
+    def packet_callback(self, packet):
+        self.captured_packets.append(packet)
+
+    def sync_sniff(self, count=10):
+        """
+        Синхронный метод для перехвата пакетов.
+        :param count: Количество пакетов для перехвата.
+        :return: Список перехваченных пакетов.
+        """
+        self.captured_packets = []  # Сбросить предыдущие пакеты
+        sniff(iface=self.iface, count=count, prn=self.packet_callback, filter=f'net {self.network}')
+        return self.captured_packets
+
+    def async_sniff(self):
+        """
+        Асинхронный метод для перехвата пакетов.
+        :return: Список перехваченных пакетов.
+        """
+        self.captured_packets = []  # Сбросить предыдущие пакеты
+        self.sniffer = AsyncSniffer(iface=self.iface, prn=self.packet_callback,  filter=f'net {self.network}')
+        self.sniffer.start()
+        return self.captured_packets
+
+    def stop_async_sniff(self):
+        """
+        Остановить асинхронный перехват пакетов.
+        :return: Список перехваченных пакетов.
+        """
+        self.sniffer.stop()
+        return self.captured_packets
+
+
+if __name__ == '__main__':
+    sniffer = Sniffer(iface='lo', network='127.0.0.1/32')
+
+    # Синхронный перехват
+    # print("Синхронный перехват:")
+    # packets = sniffer.sync_sniff(count=5)
+    # for pkt in packets:
+    #     print(pkt)
+
+    # Асинхронный перехват
+    print("\nАсинхронный перехват:")
+    async_packets = sniffer.async_sniff()
+    print("Перехват запущен. Нажмите Enter для остановки...")
+    input()  # Ожидание ввода для остановки
+    captured_packets = sniffer.stop_async_sniff()
+    for pkt in captured_packets:
+        print(pkt)
