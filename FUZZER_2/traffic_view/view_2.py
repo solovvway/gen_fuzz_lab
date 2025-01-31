@@ -52,10 +52,59 @@ osi_layers = {
     'SSH': 7,       # Уровень 7: Прикладной уровень (Secure Shell)
 }
 
+proto_num = {
+     # Уровень 1: Физический уровень
+    'Ether': 1,  # Уровень 2: Канальный уровень
+    '802.11': 2,    # Уровень 2: Канальный уровень (Wi-Fi)
+    'Bluetooth': 3,  # Уровень 2: Канальный уровень (Bluetooth)
+    'DSL': 4,       # Уровень 1: Физический уровень
+    'ISDN': 5,      # Уровень 1: Физический уровень
+
+    # Уровень 2: Канальный уровень
+    'PPP': 6,       # Уровень 2: Канальный уровень (Point-to-Point Protocol)
+    'Frame Relay': 7,  # Уровень 2: Канальный уровень
+    'HDLC': 8,      # Уровень 2: Канальный уровень (High-Level Data Link Control)
+
+    # Уровень 3: Сетевой уровень
+    'IP': 1,        # Уровень 3: Сетевой уровень (Internet Protocol)
+    'IPv4': 2,      # Уровень 3: Сетевой уровень (Internet Protocol version 4)
+    'IPv6': 3,      # Уровень 3: Сетевой уровень (Internet Protocol version 6)
+    'ICMP': 4,      # Уровень 3: Сетевой уровень (Internet Control Message Protocol)
+    'IGMP': 5,      # Уровень 3: Сетевой уровень (Internet Group Management Protocol)
+    'ARP': 6,       # Уровень 3: Сетевой уровень (Address Resolution Protocol)
+
+    # Уровень 4: Транспортный уровень
+    'TCP': 1,       # Уровень 4: Транспортный уровень (Transmission Control Protocol)
+    'UDP': 2,       # Уровень 4: Транспортный уровень (User  Datagram Protocol)
+    'SCTP': 3,      # Уровень 4: Транспортный уровень (Stream Control Transmission Protocol)
+
+    # Уровень 5: Сеансовый уровень
+    'RPC': 4,       # Уровень 5: Сеансовый уровень (Remote Procedure Call)
+    'NetBIOS': 5,   # Уровень 5: Сеансовый уровень
+
+    # Уровень 6: Представительский уровень
+    'TLS': 6,       # Уровень 6: Представительский уровень (Transport Layer Security)
+    'SSL': 7,       # Уровень 6: Представительский уровень (Secure Sockets Layer)
+
+    # Уровень 7: Прикладной уровень
+    'HTTP': 7,      # Уровень 7: Прикладной уровень (Hypertext Transfer Protocol)
+    'HTTPS': 7,     # Уровень 7: Прикладной уровень (HTTP Secure)
+    'FTP': 7,       # Уровень 7: Прикладной уровень (File Transfer Protocol)
+    'SFTP': 7,      # Уровень 7: Прикладной уровень (SSH File Transfer Protocol)
+    'SMTP': 7,      # Уровень 7: Прикладной уровень (Simple Mail Transfer Protocol)
+    'POP3': 7,      # Уровень 7: Прикладной уровень (Post Office Protocol version 3)
+    'IMAP': 7,      # Уровень 7: Прикладной уровень (Internet Message Access Protocol)
+    'DNS': 7,       # Уровень 7: Прикладной уровень (Domain Name System)
+    'DHCP': 7,      # Уровень 7: Прикладной уровень (Dynamic Host Configuration Protocol)
+    'SNMP': 7,      # Уровень 7: Прикладной уровень (Simple Network Management Protocol)
+    'Telnet': 7,    # Уровень 7: Прикладной уровень (Telnet)
+    'SSH': 7,       # Уровень 7: Прикладной уровень (Secure Shell)
+}
+
 # Пример использования
-def get_osi_layer(protocol):
-    """Возвращает номер уровня OSI для данного протокола."""
-    return osi_layers.get(protocol, None)
+def get_proto_layer_number(protocol):
+    """Возвращает номер  протокола для уровня."""
+    return proto_num.get(protocol, None)
 class Unit:
     def __init__(self, ip_src, ip_dst, mac_src, mac_dst, layers, pdu):
         self.ip_src = ip_src
@@ -86,13 +135,27 @@ class NetDot:
         self.y = y
         self.z = z
 
-dump = [Ether()/IP(dst='127.0.0.1'),Ether()/IP(src="192.168.1.1", dst="192.168.1.2")/UDP()/DNS(),Ether()/IP(dst='127.0.0.1')/TCP()] 
+dump = sniff(count=30,prn = lambda x: x.summary())
+
+# dump = [
+#     Ether()/IP(dst='127.0.0.1'),
+#     Ether()/IP(src="192.168.1.1", dst="192.168.1.2")/UDP()/DNS(),
+#     Ether()/IP(dst='127.0.0.1')/TCP(),
+#     Ether()/IP(src="192.168.1.1", dst="192.168.1.2")/TCP(),
+#     Ether()/IPv6(),
+#     Ether()/ICMP(),
+#     Ether()/ARP()
+#     ] 
 
 uniq_dump = []
 for i in dump:
         # .get() в scapy не работает
-        ip_src = getattr(i.__getitem__('IP'), 'src', None)
-        ip_dst = getattr(i.__getitem__('IP'), 'dst', None)
+        try:
+            ip_src = getattr(i.__getitem__('IP'), 'src', None)
+            ip_dst = getattr(i.__getitem__('IP'), 'dst', None)
+        except:
+            ip_src = None
+            ip_dst = None
         mac_src = getattr(i.__getitem__('Ether'), 'src', None) 
         mac_dst = getattr(i.__getitem__('Ether'), 'dst', None)
         layers = i.layers()
@@ -104,9 +167,9 @@ for i in dump:
 netDots = []
 for i in uniq_dump:
     protocols = [layer.__name__ for layer in i.pdu.layers()]
-    x = get_osi_layer(protocols[0]) if len(protocols) > 0 else 0
-    y = get_osi_layer(protocols[1]) if len(protocols) > 1 else 0
-    z = get_osi_layer(protocols[2]) if len(protocols) > 2 else 0
+    x = get_proto_layer_number(protocols[0]) if len(protocols) > 0 else 0
+    y = get_proto_layer_number(protocols[1]) if len(protocols) > 1 else 0
+    z = get_proto_layer_number(protocols[2]) if len(protocols) > 2 else 0
     netdot = NetDot(x=x, y=y, z=z)
     netDots.append(netdot)
 
@@ -127,18 +190,18 @@ ax.set_xlabel('Уровень 2 (Канальный уровень)')
 ax.set_ylabel('Уровень 3 (Сетевой уровень)')
 ax.set_zlabel('Уровень 4 (Транспортный уровень)')
 
+# Установка пределов осей
+ax.set_xlim(0, 7)  # Уровень 2 (Канальный уровень)
+ax.set_ylim(0, 7)  # Уровень 3 (Сетевой уровень)
+ax.set_zlim(0, 7)  # Уровень 4 (Транспортный уровень)
+
 # Установка меток на осях
-# Уровень 2
-ax.set_xticks([2])  # Уровень 2
-ax.set_xticklabels(['2'])  # Метка для уровня 2
+ax.set_xticks(range(0, 8))  # Уровень 2
+ax.set_yticks(range(0, 8))  # Уровень 3
+ax.set_zticks(range(0, 8))  # Уровень 4
 
-# Уровень 3
-ax.set_yticks([3])  # Уровень 3
-ax.set_yticklabels(['3'])  # Метка для уровня 3
-
-# Уровень 4
-ax.set_zticks([4])  # Уровень 4
-ax.set_zticklabels(['4'])  # Метка для уровня 4
+# Добавление сетки
+ax.grid(True)
 
 # Показ графика
 filename = 'traffic_visualization.png'
