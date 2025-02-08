@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Generator</title>
+</head>
+<body>
+    <h1>Traffic Generator</h1>
+    <div>
+        <label for="network">Network:</label>
+        <input type="text" id="network" placeholder="127.0.0.1/32">
+        <button onclick="startSniffing()">Start Sniffing</button>
+        <button onclick="stopSniffing()">Stop Sniffing</button>
+    </div>
+    <div>
+        <h2>Unique Protocols</h2>
+        <ul id="protocols"></ul>
+    </div>
+    <div>
+        <h2>Set Protocol Weights</h2>
+        <div id="weightsInput"></div>
+        <button onclick="setProtoWeights()">Set Weights</button>
+    </div>
+    <div>
+        <h2>Set Mutation Weights</h2>
+        <input type="text" id="mutationWeights" placeholder="e.g., [99, 2, 1, 1, 2, 1, 1, 1]">
+        <button onclick="setWeights()">Set Weights</button>
+    </div>
+    <div>
+        <button onclick="generateTraffic()">Generate Traffic</button>
+    </div>
+    <script>
+        async function startSniffing() {
+            const network = document.getElementById('network').value;
+            const response = await fetch('/start_sniffing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ network })
+            });
+            const data = await response.json();
+            console.log(data.status);
+        }
+
+        async function stopSniffing() {
+            const response = await fetch('/stop_sniffing', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            document.getElementById('protocols').innerHTML = data.uniq_protocols.map(proto => `<li>${proto}</li>`).join('');
+        }
+        async function setProtoWeights() {
+        const protoWeights = {};
+        // Gather weights from user input
+        const protocols = document.querySelectorAll('#weightsInput input');
+        protocols.forEach(input => {
+            protoWeights[input.name] = parseInt(input.value, 10);
+        });
+
+        const response = await fetch('/set_proto_weights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ proto_weights: protoWeights })
+        });
+        const data = await response.json();
+        console.log(data.status);
+    }
+
+
+        async function setWeights() {
+            const weights = JSON.parse(document.getElementById('mutationWeights').value);
+            const response = await fetch('/set_weights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ weights })
+            });
+            const data = await response.json();
+            console.log(data.status);
+        }
+
+        async function generateTraffic() {
+            const response = await fetch('/generate_traffic', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            console.log(data.status, data.packet);
+        }
+    </script>
+</body>
+</html>

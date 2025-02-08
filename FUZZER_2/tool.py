@@ -1,14 +1,21 @@
 from cli_tool.structures import *
 from feedback.feedback import *
-from traffic_view.view_2 import *
+# from traffic_view.view_2 import *
 
-# Sniffing make dump
 sniffer = Sniffer(iface='lo', network='127.0.0.1/32')
-print("\nАсинхронный перехват:")
-async_packets = sniffer.async_sniff()
+# print("\nАсинхронный перехват:")
+input("Нажмите Enter для запуска сниффера...")  # Ожидание ввода перед запуском сниффера
+async_packets = sniffer.async_sniff()  # Сниффер запускается здесь
 print("Перехват запущен. Нажмите Enter для остановки...")
 input()  # Ожидание ввода для остановки
+# input()  # Ожидание ввода для остановки
 dump = sniffer.stop_async_sniff()
+# dump = sniffer.sync_sniff()
+
+# input()
+# t = AsyncSniffer(iface="lo", filter=f'net 127.0.0.1/32')
+# input()
+# dump = t.stop()
 for pkt in dump:
     print(pkt)
 
