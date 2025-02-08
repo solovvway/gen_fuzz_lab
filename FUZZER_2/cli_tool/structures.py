@@ -76,6 +76,18 @@ class Mutator:
             if 'mutations' in weights:
                 for method, weight in zip(self.mutations.keys(), weights['mutations']):
                     self.mutations[method] = weight
+    
+    def input_weights(self):
+        print("Введите веса для методов кроссовера:")
+        for method in self.crossovers.keys():
+            weight = float(input(f"{method.__name__}: "))
+            self.crossovers[method] = weight
+
+        print("Введите веса для методов мутации:")
+        for method in self.mutations.keys():
+            weight = float(input(f"{method.__name__}: "))
+            self.mutations[method] = weight
+    
     def mut_fuzz(self, pkt1):
         pkt1 = pkt1.pdu
         mutation = random.choices(list(self.mutations.keys()), weights=list(self.mutations.values()), k=1)[0]

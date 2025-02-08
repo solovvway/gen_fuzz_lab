@@ -2,7 +2,10 @@ from cli_tool.structures import *
 from feedback.feedback import *
 # from traffic_view.view_2 import *
 
-sniffer = Sniffer(iface='lo', network='127.0.0.1/32')
+# ВВодим подсеть
+network = input("Enter network:")
+
+sniffer = Sniffer(iface='lo', network=network)
 # print("\nАсинхронный перехват:")
 input("Нажмите Enter для запуска сниффера...")  # Ожидание ввода перед запуском сниффера
 async_packets = sniffer.async_sniff()  # Сниффер запускается здесь
@@ -40,12 +43,23 @@ for i in uniq_dump:
         uniq_protocols.add(j.__name__)
 
 # тестовая версия, его нужно получать из веб-интерфейса по uniq_protocols
-proto_weights = {
-    'IP':1,
-    'TCP':2,
-    'DNS':3,
-    'Raw':228
-}
+# proto_weights = {
+#     'IP':1,
+#     'TCP':2,
+#     'DNS':3,
+#     'Raw':228
+# }
+
+proto_weights = {}
+for i in uniq_protocols:
+    while True:
+        try:
+            weight = int(input(f'weight for proto {i}: '))
+            proto_weights[i] = weight
+            break
+        except ValueError:
+            print("Пожалуйста, введите корректное целое число.")
+
 
 # make population
 population = Population()
@@ -54,12 +68,15 @@ for i in uniq_dump:
     population.add(i,weight)
 print(population.show())
 
-weights = {
-    'crossovers': [99, 3],  # Новые веса для методов кроссовера
-    'mutations': [99, 2, 1, 1, 2, 1, 1, 1]  # Новые веса для методов мутации
-}
+# weights = {
+#     'crossovers': [99, 3],  # Новые веса для методов кроссовера
+#     'mutations': [99, 2, 1, 1, 2, 1, 1, 1]  # Новые веса для методов мутации
+# }
+mutator = Mutator()
+mutator.input_weights()
+
 while True:
-    mutator = Mutator(weights)
+    # mutator = Mutator()
     a,b = population.choice_two()
     # print(a,b)
     pkt_after_fuzz = mutator.gen_fuzz(a,b)
