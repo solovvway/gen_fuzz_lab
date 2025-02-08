@@ -2,7 +2,9 @@ from scapy.all import *
 import random
 from collections import OrderedDict
 import socket
-
+import matplotlib.pyplot as plt
+from ping3 import ping
+import time
 
 class Unit:
     def __init__(self, ip_src, ip_dst, mac_src, mac_dst, layers, pdu):
@@ -80,7 +82,8 @@ class Mutator:
     def input_weights(self):
         print("Введите веса для методов кроссовера:")
         for method in self.crossovers.keys():
-            weight = float(input(f"{method.__name__}: "))
+            # тк потом весами будет время в милисекундах, превращаем время как бы в милисекунды
+            weight = float(input(f"{method.__name__}: ")) * 0.000001
             self.crossovers[method] = weight
 
         print("Введите веса для методов мутации:")
@@ -220,20 +223,13 @@ class Sender:
             try:
                 socket = self.initiate_connection(dst_ip, dst_port)
                 ss = StreamSocket(socket, Raw)
-                start_time = time.time()
-                response = ss.send(packet)  # Используем поле Raw из пакета
-                end_time = time.time()
-
-                if response:
-                    rtt = (end_time - start_time) * 1000  # Преобразуем в миллисекунды
-                    print(f"Data packet sent: {packet.summary()}, RTT: {rtt:.2f} ms")
-                else:
-                    print(f"Data packet sent: {packet.summary()}, No response")
+                ss.send(packet)  # Используем поле Raw из пакета
+                
 
                 # Принудительно разрываем соединение с помощью RST
-                rst_packet = IP(dst=dst_ip) / TCP(dport=dst_port, sport=socket.getsockname()[1], flags="R")
-                send(rst_packet, iface=self.iface, verbose=0)
-                print("Connection forcibly terminated with RST packet.")
+                # rst_packet = IP(dst=dst_ip) / TCP(dport=dst_port, sport=socket.getsockname()[1], flags="R")
+                # send(rst_packet, iface=self.iface, verbose=0)
+                # print("Connection forcibly terminated with RST packet.")
 
                 socket.close()
             except Exception as e:
@@ -281,6 +277,42 @@ class Sniffer:
         """
         self.sniffer.stop()
         return self.captured_packets
+#сбор обратной связи. пинг указанной цели, сохраннение данных, построение графика
+class Feedback():
+    def __init__(self):
+        self.x = []
+        self.y = []
+
+    def ping_feedback(self,target):
+        response_time = ping(target)
+        return response_time
+
+    def collect_ping_data(self, start_time,response_time):
+        # start_time = time.time()
+        # response_time = self.ping_feedback(target)
+        current_time = time.time() - start_time  # Время относительно начала
+
+        if response_time is not None:
+            self.x.append(current_time)  # Время в секундах
+            self.y.append(response_time * 1000)  # Переводим в миллисекунды
+            # print(f"Time: {current_time:.2f} s, Response Time: {response_time * 1000:.2f} ms")
+        else:
+            self.x.append(9999999999999999)
+            print("Ping failed, no response.")
+        
+
+        # return x_data, y_data
+    def plot_ping_data(self, name_of_file):
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.x, self.y, marker='o', linestyle='-', color='blue')
+        plt.title(f'Ping Response Time to {target}')
+        plt.xlabel('Time (seconds)')
+        plt.ylabel('Response Time (ms)')
+        plt.ylim(0, max(200, max(self.y) * 1.1))  # Устанавливаем пределы по оси Y
+        plt.grid()
+        plt.savefig(name_of_file)  # Сохраняем график как изображение
+        plt.close() 
+
 
 
 if __name__ == '__main__':
