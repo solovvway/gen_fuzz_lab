@@ -1,6 +1,7 @@
 from scapy.all import *
 import random
 from collections import OrderedDict
+import socket
 
 
 class Unit:
@@ -179,21 +180,54 @@ class Sender:
     def __init__(self, iface='eth0'):
         self.iface = iface
 
+    def initiate_connection(self, dst_ip, dst_port):
+        print(f"Initiating TCP connection to {dst_ip}:{dst_port}")
+
+        s = socket.socket()
+        s.connect((str(dst_ip), int(dst_port)))
+        return s
+
     def send_packet(self, packet):
         print("PACKET BEFORE SENDING:", packet.command())
 
         if IP in packet:
-            del packet[IP].chksum  # Remove checksum to recalculate
+            del packet[IP].chksum  # Удаляем контрольную сумму для пересчета
 
-        start_time = time.time()
-        response = sendp(packet, iface=self.iface, verbose=0) if Ether in packet else send(packet, iface=self.iface, verbose=0)
-        end_time = time.time()
+        if TCP in packet:
+            dst_ip = packet[IP].dst
+            dst_port = packet[TCP].dport
 
-        if response:
-            rtt = (end_time - start_time) * 1000  # Convert to milliseconds
-            print(f"Packet sent: {packet.summary()}, RTT: {rtt:.2f} ms")
+            # Если пакет с флагами SYN, SYN-ACK или ACK, просто отправляем его
+            if packet[TCP].flags in ['S', 'SA', 'A']:
+                print(f"Sending TCP control packet: {packet.summary()}")
+                response = send(packet, iface=self.iface, verbose=0)
+                return
+
+            # Если это пакет с данными, инициируем соединение
+            print("Initiating connection for data packet...")
+            try:
+                socket = self.initiate_connection(dst_ip, dst_port)
+                ss = StreamSocket(socket, Raw)
+                start_time = time.time()
+                response = ss.send(packet)  # Используем поле Raw из пакета
+                end_time = time.time()
+
+                if response:
+                    rtt = (end_time - start_time) * 1000  # Преобразуем в миллисекунды
+                    print(f"Data packet sent: {packet.summary()}, RTT: {rtt:.2f} ms")
+                else:
+                    print(f"Data packet sent: {packet.summary()}, No response")
+
+                # Принудительно разрываем соединение с помощью RST
+                rst_packet = IP(dst=dst_ip) / TCP(dport=dst_port, sport=socket.getsockname()[1], flags="R")
+                send(rst_packet, iface=self.iface, verbose=0)
+                print("Connection forcibly terminated with RST packet.")
+
+                socket.close()
+            except Exception as e:
+                print(f"Failed to send data packet due to connection issues: {e}")
         else:
-            print(f"Packet sent: {packet.summary()}, No response")
+            print("Packet does not contain TCP layer.")
 
 class Sniffer:
     def __init__(self, network, iface='eth0'):
