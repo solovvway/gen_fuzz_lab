@@ -83,7 +83,7 @@ class Mutator:
         print("Введите веса для методов кроссовера:")
         for method in self.crossovers.keys():
             # тк потом весами будет время в милисекундах, превращаем время как бы в милисекунды
-            weight = float(input(f"{method.__name__}: ")) * 0.000001
+            weight = float(input(f"{method.__name__}: ")) 
             self.crossovers[method] = weight
 
         print("Введите веса для методов мутации:")
@@ -280,39 +280,39 @@ class Sniffer:
 #сбор обратной связи. пинг указанной цели, сохраннение данных, построение графика
 class Feedback():
     def __init__(self):
-        self.x = []
-        self.y = []
-
-    def ping_feedback(self,target):
-        response_time = ping(target)
+        self.database = {}
+    
+    def ping_feedback(self, target):
+        if target not in self.database:
+            self.database[target] = {"x": [], "y": []}  # Инициализируем y как список
+        response_time = ping(target)  # Предполагается, что ping возвращает время ответа
         return response_time
 
-    def collect_ping_data(self, start_time,response_time):
-        # start_time = time.time()
-        # response_time = self.ping_feedback(target)
+    def collect_ping_data(self, start_time, response_time, target):
         current_time = time.time() - start_time  # Время относительно начала
 
         if response_time is not None:
-            self.x.append(current_time)  # Время в секундах
-            self.y.append(response_time * 1000)  # Переводим в миллисекунды
-            # print(f"Time: {current_time:.2f} s, Response Time: {response_time * 1000:.2f} ms")
+            self.database[target]["x"].append(current_time)  # Время в секундах
+            self.database[target]["y"].append(response_time * 1000)  # Переводим в миллисекунды
         else:
-            self.x.append(9999999999999999)
+            self.database[target]["x"].append(current_time)  # Добавляем текущее время
+            self.database[target]["y"].append(9999999999999999)  # Добавляем большое значение для неудачного пинга
             print("Ping failed, no response.")
-        
 
-        # return x_data, y_data
     def plot_ping_data(self, name_of_file):
-        plt.figure(figsize=(10, 5))
-        plt.plot(self.x, self.y, marker='o', linestyle='-', color='blue')
-        plt.title(f'Ping Response Time to {target}')
-        plt.xlabel('Time (seconds)')
-        plt.ylabel('Response Time (ms)')
-        plt.ylim(0, max(200, max(self.y) * 1.1))  # Устанавливаем пределы по оси Y
-        plt.grid()
-        plt.savefig(name_of_file)  # Сохраняем график как изображение
-        plt.close() 
-
+        for target in self.database:
+            x_data = self.database[target]["x"]
+            y_data = self.database[target]["y"]
+            plt.figure(figsize=(10, 5))
+            plt.plot(x_data, y_data, marker='o', linestyle='-', color='blue')
+            plt.title(f'Ping Response Time to {target}')
+            plt.xlabel('Time (seconds)')
+            plt.ylabel('Response Time (ms)')
+            if y_data:  # Проверяем, что y_data не пуст
+                plt.ylim(0, max(200, max(y_data) * 1.1))  # Устанавливаем пределы по оси Y
+            plt.grid()
+            plt.savefig(f'{name_of_file}_{target}.png')  # Сохраняем график как изображение
+            plt.close()
 
 
 if __name__ == '__main__':

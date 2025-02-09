@@ -1,9 +1,11 @@
 from cli_tool.structures import *
 from feedback.feedback import *
 # from traffic_view.view_2 import *
-import keyboard 
+# import keyboard 
 from scapy.all import ARP, Ether, srp
-
+import signal
+import sys
+running = True
 # ВВодим подсеть
 network = input("Enter network:")
 
@@ -23,7 +25,10 @@ def get_ip_by_mac(target_mac):
             return received.psrc
     return network.split("/")[0]
 
-
+def signal_handler(sig, frame):
+    global running
+    running = False
+    print("Получен сигнал завершения. Завершение цикла...")
 
 sniffer = Sniffer(iface='lo', network=network)
 # print("\nАсинхронный перехват:")
@@ -74,7 +79,7 @@ proto_weights = {}
 for i in uniq_protocols:
     while True:
         try:
-            weight = int(input(f'weight for proto {i}: '))
+            weight = int(input(f'weight for proto {i}: ')) * 0.000001
             proto_weights[i] = weight
             break
         except ValueError:
@@ -99,7 +104,11 @@ mutator.input_weights()
 start_time = time.time()
 feedback = Feedback()
 
-while True:
+signal.signal(signal.SIGINT, signal_handler)
+
+
+
+while running:
     # mutator = Mutator()
     a,b = population.choice_two()
     # print(a,b)
@@ -123,7 +132,7 @@ while True:
         mac_dst = getattr(pkt_after_fuzz.__getitem__('Ether'), 'dst', None)
     else:
         mac_src = None 
-        mac_dst = None
+        mac_dst = "ff:ff:ff:ff:ff:ff"
 
         # Получение обратной связи в качестве ее значения используем время ответа
     if ip_dst is None and mac_dst is not None:
@@ -140,16 +149,18 @@ while True:
     # mac_src = getattr(pkt_after_fuzz.__getitem__('Ether'), 'src', None) 
     # mac_dst = getattr(pkt_after_fuzz.__getitem__('Ether'), 'dst', None)
     layers = pkt_after_fuzz.layers()
-    unit_after_fuzz = Unit(ip_src=ip_src, ip_dst=ip_dst, mac_src=mac_src, mac_dst=mac_dst, layers=layers, pdu=i)
+    unit_after_fuzz = Unit(ip_src=ip_src, ip_dst=ip_dst, mac_src=mac_src, mac_dst=mac_dst, layers=layers, pdu=pkt_after_fuzz)
     
     # получение обратной связи в качестве ее значения используем время ответа
-    weight = feedback.ping_feedback(ip_dst)
-    # сохраняем значение чтобы построить график времени ответа в конце
-    feedback.collect_ping_data(start_time=start_time, response_time=weight)
-    # обновляем популяцию
-    population.add(unit_after_fuzz,weight)
-    # if keyboard.is_pressed('q'):
-    #     print("Завершение цикла...")
-    #     break  # Выход из цикла
+    try:
+        weight = feedback.ping_feedback(ip_dst)
+        # сохраняем значение чтобы построить график времени ответа в конце
+        feedback.collect_ping_data(start_time=start_time, response_time=weight, target=ip_dst)
+        # обновляем популяцию
+        population.add(unit_after_fuzz,weight)
+    except Exception as e:
+        print(f"Failed to get feedback from target: {e}")
+
+
 
 feedback.plot_ping_data('plot_ping_data.png')
