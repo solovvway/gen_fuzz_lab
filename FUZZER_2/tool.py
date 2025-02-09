@@ -1,11 +1,13 @@
 from cli_tool.structures import *
-from feedback.feedback import *
-# from traffic_view.view_2 import *
+from only_feedback.feedback import *
+# from only_traffic_view.view_2 import *
 # import keyboard 
 from scapy.all import ARP, Ether, srp
 import signal
 import sys
 running = True
+
+
 # ВВодим подсеть
 network = input("Enter network:")
 
@@ -75,6 +77,7 @@ for i in uniq_dump:
 #     'Raw':228
 # }
 
+# ЭТО НАЧАЛЬНОЕ СОСТОЯНИЕ В ЦЕПЯХ МАРКОВА или Матрица перехода а нач состояние - веса в популяции?
 proto_weights = {}
 for i in uniq_protocols:
     while True:
@@ -161,6 +164,16 @@ while running:
     except Exception as e:
         print(f"Failed to get feedback from target: {e}")
 
+    # REMAKE POPULATION PSEUDO MARKOV
+    for i in population.population.keys():
+        if proto_weights[i.pdu.lastlayer()._name]:
+            transition_coeff = proto_weights[i.pdu.lastlayer()._name]
+            population.add(i,population.population[i]*transition_coeff)
+        else:
+            print(f"transition coefficient didn`t find in list of protocol weights for protocol {i.pdu.lastlayer()._name}")
+            pass
+
+    print(population.show())
 
 
 feedback.plot_ping_data('plot_ping_data.png')

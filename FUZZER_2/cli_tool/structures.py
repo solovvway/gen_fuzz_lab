@@ -332,3 +332,45 @@ if __name__ == '__main__':
     captured_packets = sniffer.stop_async_sniff()
     for pkt in captured_packets:
         print(pkt)
+
+
+def gen_list_n_n(lenght):
+    a=[]
+    for j in range(lenght):
+        a.append([random.random() for i in range(lenght)])
+    b = np.array(a)
+    b /= b.sum(axis=1)[:, np.newaxis]
+    return b
+
+
+
+# # ЦЕПИ МАРКОВА
+# def gen_list_n(lenght):
+#     a=[]
+#     for j in range(lenght):
+#         a.append(random.random())
+    
+#     max_b = sum(a)
+#     b = np.array([i/max_b for i in a])
+#     return b
+
+# def mark_n_n(n):
+#     p_init = gen_list_n(n)
+#     p_transition = gen_list_n_n(n)
+#     print(f'{p_init=}')
+#     print(f'{p_transition=}')
+#     # for i in range(len(p_transition)):
+#     #     print('check', i,"row")
+#     #     assert int(p_transition[i, :].sum()) == 1
+
+
+#     p_next = p_init @ p_transition
+#     print(f'{p_next=}')
+
+#     p_state_t = [p_init]
+#     for i in range(200):  # 200 time steps sorta, kinda, approximates infinite time :)
+#         p_state_t.append(p_state_t[-1] @ p_transition)
+#     state_distributions = pd.DataFrame(p_state_t)
+#     print(state_distributions)
+#     state_distributions.plot()
+#     plt.show()
